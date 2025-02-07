@@ -155,13 +155,10 @@ def load_data(file_name):
 
     try:
         df["Data"] = pd.to_datetime(df["Data"], format='%Y-%m-%d %H:%M:%S', errors='coerce')
-        df["Data"] = df["Data"] + timedelta(hours=1)
     except Exception as e:
         print(f"Błąd podczas konwersji daty: {e}")
         return None, "Błąd podczas konwersji daty."
 
-    df["Data 15min"] = df["Data"].apply(lambda x: x - timedelta(minutes=x.minute % 15, seconds=x.second,
-                                                                microseconds=x.microsecond) if pd.notnull(x) else None)
     # Extracting the mr number from the file name
     match = re.search(r'([^\\]+)(?=_\d{4}-\d{2}-\d{2}_POJAZDY\.(xlsx|csv)$)', file)
     odcinek = match.group(1) if match else None
@@ -178,7 +175,7 @@ def process_data_db(df):
 
     if df.empty:
         raise ValueError("DataFrame jest pusty.")
-
+    df["Data 15min"] = df["Data"].dt.floor("15min")
     # Maski dla pasów ruchu i kategorii
     mask_pas_1 = df['Pas ruchu'] == 1
     mask_pas_2 = df['Pas ruchu'] == 2
