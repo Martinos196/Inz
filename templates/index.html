@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wykres Samochodów</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+    <style>
+        body {
+            background-color: #2e2e2e;
+            color: #f5f5f5;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        #clear-plots-button {
+            background-color: #444;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            color: #f5f5f5;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        #clear-plots-button:hover {
+            background-color: #555;
+        }
+
+        #download-csv-button {
+            background-color: #444;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            color: #f5f5f5;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        #download-csv-button:hover {
+            background-color: #555;
+        }
+
+        .plot-container {
+            flex: 3; /* Prawa kolumna zajmuje większą część */
+            background-color: #333;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 20px;
+            color: #fff;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .visualization-layout {
+            display: flex;
+            flex-direction: row;
+            gap: 20px; /* Odstęp między kolumnami */
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .form-container {
+            flex: 1; /* Lewa kolumna zajmuje jedną część */
+            max-width: 400px; /* Opcjonalnie ogranicz szerokość formularza */
+            background-color: #333;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .plot-container {
+            max-width: 100%;
+            position: relative;
+        }
+
+        label {
+            color: #f5f5f5;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"], select {
+            background-color: #555;
+            color: #f5f5f5;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #444;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            color: #f5f5f5;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        .success-message {
+            color: green;
+            font-weight: bold;
+        }
+
+        .error-message {
+            color: #ff6f6f;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .ui-datepicker {
+            background: #333;
+            border: 1px solid #444;
+            color: #f5f5f5;
+        }
+
+        .ui-datepicker-header {
+            background: #444;
+            color: #f5f5f5;
+        }
+
+        .ui-datepicker-prev, .ui-datepicker-next {
+            background-color: #a2a2a2;
+            color: #f5f5f5;
+        }
+
+        .ui-datepicker-calendar td a {
+            color: #f5f5f5;
+        }
+
+        .ui-datepicker-calendar td a.ui-state-active {
+            background: #555;
+            border-radius: 5px;
+        }
+
+        /* Stylowanie dla menu autouzupełniania */
+        .ui-autocomplete {
+            max-height: 160px; /* Maksymalna wysokość menu */
+            overflow-y: auto; /* Dodanie suwaka pionowego, gdy lista jest zbyt długa */
+            overflow-x: hidden; /* Ukryj suwak poziomy */
+        }
+
+        /* Media Queries */
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+                justify-content: space-around;
+            }
+
+            .form-container {
+                flex: 0 0 300px;
+            }
+
+            .plot-container {
+                flex: 2;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .plot-container {
+                height: auto;
+                flex: 2;
+            }
+        }
+
+
+        #confirmation-modal {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Ustaw na górę strony */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            padding-top: 20px; /* Dodać odstęp od góry */
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            width: 400px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-message {
+            font-size: 16px;
+            color: #333333;
+            margin-bottom: 20px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .modal-button {
+            flex: 1;
+            padding: 10px 15px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .modal-button.yes {
+            background-color: #4CAF50; /* Zielony */
+            color: white;
+        }
+
+        .modal-button.no {
+            background-color: #F44336; /* Czerwony */
+            color: white;
+        }
+
+        .modal-button.cancel {
+            background-color: #9E9E9E; /* Szary */
+            color: white;
+        }
+
+        .modal-button:hover {
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background-color: #f1f1f1;
+            border-bottom: 2px solid #ddd;
+            justify-content: center;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid #007bff;
+            color: #007bff;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .mr-container {
+            display: flex;
+            flex-direction: column; /* Ustawienie napisu nad polem */
+            gap: 5px; /* Odstęp między napisem a polem */
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            position: relative;
+            width: 100%;
+        }
+
+
+        #show-location-button {
+            position: absolute;
+            right: 5px; /* Przycisk na prawym krańcu pola */
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #42a5f5, #1976d2);
+            border: none;
+            color: white;
+            padding: 8px;
+            font-size: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+
+
+    </style>
+</head>
+<body>
+<div class="tabs">
+    <div class="tab active" onclick="switchTab('db-connection')">Połączenie z bazą danych</div>
+    <div class="tab" onclick="switchTab('visualization')">Wizualizacja wykresu</div>
+</div>
+<div class="container">
+    <div id="db-connection" class="tab-content active">
+        <div class="form-container">
+            <p class="success-message">{{ db_message }}</p>
+            <h2 class="mb-4">Informacje o bazie danych</h2>
+            <button class="btn btn-primary" onclick="openPopup()">Połącz z bazą danych</button>
+            <div id="popup"
+                 style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+            background:white; padding:20px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.2);
+            z-index:1000; max-width: 400px; width: 90%;">
+                <h2 class="text-center" style="color: #343a40; font-weight: bold; margin-bottom: 20px;">Podaj dane
+                    połączenia</h2>
+                <form id="connect-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-4" style="margin-bottom: 0.8rem;">
+                        <label style="color: #343a40;" for="db_name" class="form-label">Nazwa bazy danych</label>
+                        <input type="text" class="form-control" id="db_name" name="db_name"
+                               placeholder="np. my_database"
+                               required>
+                    </div>
+                    <div class="mb-4" style="margin-bottom: 0.8rem;">
+                        <label style="color: #343a40;" for="db_user" class="form-label">Użytkownik</label>
+                        <input type="text" class="form-control" id="db_user" name="db_user" placeholder="np. admin"
+                               required>
+                    </div>
+                    <div class="mb-4" style="margin-bottom: 0.8rem;">
+                        <label style="color: #343a40;" for="db_password" class="form-label">Hasło</label>
+                        <input type="password" class="form-control" id="db_password" name="db_password"
+                               placeholder="Wpisz hasło" required>
+                    </div>
+                    <div class="mb-4" style="margin-bottom: 0.8rem;">
+                        <label style="color: #343a40;" for="db_host" class="form-label">Host</label>
+                        <input type="text" class="form-control" id="db_host" name="db_host"
+                               placeholder="Domyślnie: localhost">
+                    </div>
+                    <div class="mb-4" style="margin-bottom: 1.0rem;">
+                        <label style="color: #343a40;" for="db_port" class="form-label">Port</label>
+                        <input type="text" class="form-control" id="db_port" name="db_port"
+                               placeholder="Domyślnie: 5432">
+                    </div>
+                    <div class="d-flex justify-content-between mt-4">
+                        <button style="margin-bottom: 0.8rem;" type="submit" class="btn btn-primary w-45">Połącz
+                        </button>
+                        <button type="button" class="btn btn-secondary w-45" onclick="closePopup()">Anuluj</button>
+                    </div>
+                </form>
+            </div>
+            <div id="popup-overlay"
+                 style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;"
+                 onclick="closePopup()"></div>
+
+
+            <form action="/disconnect_db" method="post" onsubmit="disconnectDatabase(event)">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit">Odłącz bazę danych</button>
+            </form>
+            <h2>Prześlij plik Excel</h2>
+            <form id="upload-form" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".xlsx,.csv" required>
+                <button type="submit">Prześlij</button>
+            </form>
+            <div id="loading-message" style="display:none; color: orange;">
+                Agregacja danych, proszę czekać...
+            </div>
+
+            <!-- Miejsce na komunikaty o błędach -->
+            <div id="error-message-upload" class="error-message"></div>
+        </div>
+    </div>
+</div>
+
+<div id="visualization" class="tab-content">
+    <div class="visualization-layout">
+        <div class="form-container">
+            <h2>Wybierz dane do stworzenia wykresu</h2>
+            <form id="plot-form">
+                <label for="start_date_1">Data początkowa (Okres 1):</label>
+                <input type="text" id="start_date_1" name="start_date_1" required><br><br>
+                <label for="end_date_1">Data końcowa (Okres 1):</label>
+                <input type="text" id="end_date_1" name="end_date_1" required><br><br>
+                <label for="start_date_2">Data początkowa (Okres 2 opcjonalny):</label>
+                <input type="text" id="start_date_2" name="start_date_2"><br><br>
+                <label for="end_date_2">Data końcowa (Okres 2 opcjonalny):</label>
+                <input type="text" id="end_date_2" name="end_date_2"><br><br>
+                <label for="car_type">Typ samochodu:</label>
+                <select id="car_type" name="car_type">
+                    <option value="H">Ciężarowy (H)</option>
+                    <option value="L">Lekki (L)</option>
+                    <option value="both">Oba</option>
+                </select><br><br>
+                <label for="day_of_week">Dzień tygodnia:</label>
+                <select id="day_of_week" name="day_of_week">
+                    <option value="">Wszystkie</option>
+                    <option value="Monday">Poniedziałek</option>
+                    <option value="Tuesday">Wtorek</option>
+                    <option value="Wednesday">Środa</option>
+                    <option value="Thursday">Czwartek</option>
+                    <option value="Friday">Piątek</option>
+                    <option value="Saturday">Sobota</option>
+                    <option value="Sunday">Niedziela</option>
+                </select><br><br>
+                <div class="mr-container">
+                    <label for="section_number">Numer MR:</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="section_number" name="section_number" autocomplete="off" required>
+                        <button id="show-location-button" type="button" title="Pokaż lokalizację">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="map-popup" title="Lokalizacja" style="display: none;">
+                    <div id="map" style="width: 600px; height: 400px;"></div>
+                </div>
+                <button style="margin-top: 0.8rem;" type="submit">Pokaż wykres</button>
+            </form>
+            <div id="error-message" class="error-message">
+                {{ error_message }}
+            </div>
+
+        </div>
+        <div class="plot-container">
+            <button id="clear-plots-button">Wyczyść wszystkie wykresy</button>
+            <button id="download-button">Pobierz</button>
+            <div id="download-options" style="display: none;">
+                <button id="download-csv">Pobierz CSV</button>
+                <button id="download-png">Pobierz obraz</button>
+            </div>
+            <div id="plot-area"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="confirmation-modal" style="display: none;">
+    <div class="modal-content">
+        <p class="modal-message">
+            W bazie danych istnieją rekordy, które znajdują się w określonym przedziale czasu. Czy przy dodawaniu nowych
+            rekordów nadpisać również istniejące?
+        </p>
+        <div class="button-container">
+            <button id="confirm-yes" class="modal-button yes">Tak</button>
+            <button id="confirm-no" class="modal-button no">Nie</button>
+            <button id="confirm-cancel" class="modal-button cancel">Anuluj</button>
+        </div>
+    </div>
+</div>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    function switchTab(tabId) {
+        // Dezaktywuj wszystkie zakładki i ukryj ich treść
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        // Aktywuj wybraną zakładkę i jej treść
+        document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    function openPopup() {
+        document.getElementById('popup').style.display = 'block';
+        document.getElementById('popup-overlay').style.display = 'block';
+    }
+
+    function closePopup() {
+        document.getElementById('popup').style.display = 'none';
+        document.getElementById('popup-overlay').style.display = 'none';
+    }
+
+    document.getElementById('connect-form').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+
+        fetch('/connect', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                if (data.success) {
+                    location.reload();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    });
+
+    $(document).ready(function () {
+        $('#show-location-button').click(function () {
+            const sectionNumber = $('#section_number').val();
+            if (!sectionNumber) {
+                alert("Proszę wybrać numer MR.");
+                return;
+            }
+            $.ajax({
+                url: '/get_location',
+                data: {section_number: sectionNumber},
+                success: function (data) {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        var myMap;
+                        // Utwórz okno dialogowe (popup) z mapą
+                        $('#map-popup').dialog({
+                            modal: true,
+                            width: 640,
+                            height: 480,
+                            open: function () {
+                                if (myMap) {
+                                    myMap.remove();
+                                }
+                                // Inicjalizacja mapy w elemencie #map
+                                myMap = L.map('map').setView([data.N_wgs84, data.E_wgs84], 15);
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                    maxZoom: 19,
+                                    attribution: '© OpenStreetMap'
+                                }).addTo(myMap);
+                                L.marker([data.N_wgs84, data.E_wgs84]).addTo(myMap)
+                                    .bindPopup('Numer MR: ' + sectionNumber)
+                                    .openPopup();
+                            },
+                            close: function () {
+                                // Usunięcie mapy przy zamknięciu okna dialogowego
+                                if (myMap) {
+                                    myMap.remove();
+                                    myMap = null;
+                                }
+                                $('#map').empty();
+                            }
+                        });
+                    }
+                },
+                error: function () {
+                    alert('Błąd pobierania danych lokalizacji.');
+                }
+            });
+        });
+    });
+</script>
+<script>
+    async function disconnectDatabase(event) {
+        event.preventDefault(); // Zapobiega odświeżeniu strony
+        const form = event.target;
+
+        // Pobierz token CSRF z ukrytego pola formularza
+        const csrfToken = form.querySelector('input[name="csrf_token"]').value;
+
+        try {
+            const response = await fetch(form.action, {
+                method: form.method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+            });
+
+            const result = await response.json();
+
+            // Wyświetl popup z komunikatem
+            alert(result.message);
+
+            // Sprawdź, czy operacja zakończyła się sukcesem
+            if (result.success) {
+                location.reload(); // Przeładuj stronę
+            }
+        } catch (error) {
+            console.error('Wystąpił błąd:', error);
+            alert('Nie udało się odłączyć bazy danych. Spróbuj ponownie.');
+        }
+    }
+</script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+<script>
+    $(function () {
+        const today = new Date();
+        let allSections = []; // Zmienna na wszystkie sekcje
+        $("#start_date_1").datepicker({
+            dateFormat: 'yy-mm-dd',
+            maxDate: today,
+            firstDay: 1,
+            onClose: function (selectedDate) {
+                $("#end_date_1").datepicker("option", "minDate", selectedDate);
+            }
+        });
+
+        $("#end_date_1").datepicker({
+            dateFormat: 'yy-mm-dd',
+            maxDate: today,
+            firstDay: 1,
+            onClose: function (selectedDate) {
+                $("#start_date_1").datepicker("option", "maxDate", selectedDate);
+            }
+        });
+
+        $("#start_date_2").datepicker({
+            dateFormat: 'yy-mm-dd',
+            maxDate: today,
+            firstDay: 1,
+            onClose: function (selectedDate) {
+                $("#end_date_2").datepicker("option", "minDate", selectedDate);
+            }
+        });
+
+        $("#end_date_2").datepicker({
+            dateFormat: 'yy-mm-dd',
+            maxDate: today,
+            firstDay: 1,
+            onClose: function (selectedDate) {
+                $("#start_date_2").datepicker("option", "maxDate", selectedDate);
+            }
+        });
+
+        // Pobierz wszystkie sekcje z serwera
+        $.ajax({
+            url: '/get_sections',
+            type: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                if (Array.isArray(data)) {
+                    allSections = data.map(String); // Konwertuj wartości na stringi
+                    console.log('All sections:', allSections);
+                } else {
+                    console.error('Unexpected data format:', data);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error('Error fetching sections:', textStatus, errorThrown);
+            }
+        });
+
+        $('#section_number').autocomplete({
+            source: function (request, response) {
+                // Filtrowanie na podstawie wprowadzonego tekstu
+                const filteredSections = allSections
+                    .filter(section => section.toLowerCase().includes(request.term.toLowerCase()))
+                    .sort();
+
+                // Debugging: Sprawdź przefiltrowane sekcje
+                console.log('Filtered sections:', filteredSections);
+
+                // Zwróć przefiltrowane sekcje
+                response(filteredSections);
+            },
+            minLength: 0, // Pozwól na pokazanie pełnej listy po otwarciu
+            select: function (event, ui) {
+                $('#section_number').val(ui.item.value);
+            }
+        }).on('focus', function () {
+            $(this).autocomplete("search", ""); // Wywołaj funkcję wyszukiwania, aby pokazać pełną listę
+        });
+
+// Zmienna do przechowywania temp_id
+        let tempId = null;
+
+        $('#upload-form').on('submit', function (e) {
+            e.preventDefault();
+            $('#error-message-upload').empty();
+
+            // Pokazujemy komunikat o ładowaniu
+            $('#loading-message').show();
+
+            // Utwórz obiekt FormData i dodaj dane z formularza
+            let formData = new FormData(this);
+
+            $.ajax({
+                url: '/upload',
+                type: 'POST',
+                data: formData,
+                processData: false, // Wyłącz przetwarzanie danych, aby obsługiwać FormData
+                contentType: false, // Ustawienia Content-Type są automatycznie ustawiane przez FormData
+                success: function (response) {
+                    // Po zakończeniu operacji, ukrywamy komunikat o ładowaniu
+                    $('#loading-message').hide();
+
+                    if (response.error) {
+                        $('#error-message-upload').text(response.error);
+                    } else {
+                        // Jeśli są istniejące rekordy, wyświetlamy okno potwierdzenia
+                        if (response.requires_confirmation) {
+                            tempId = response.temp_id;  // Przechowujemy temp_id
+                            // Wyświetlamy modal
+                            $('#confirmation-modal').show();
+                        } else {
+                            // Jeśli brak rekordów do nadpisania, przekierowujemy
+                            window.location.href = "/";
+                        }
+                    }
+                },
+                error: function (xhr) {
+                    $('#loading-message').hide();
+                    $('#error-message-upload').text('Wystąpił błąd podczas przesyłania pliku.');
+                }
+            });
+        });
+
+// Funkcja, która będzie wywołana po kliknięciu "Tak", "Nie" lub "Anuluj"
+        $('#confirm-yes').on('click', function () {
+            // Wysyłamy do backendu informację o tym, że użytkownik zgodził się na nadpisanie
+            $.ajax({
+                url: '/confirm-overwrite',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    temp_id: tempId,
+                    overwrite_request: true
+                }),
+                success: function (confirmationResponse) {
+                    if (confirmationResponse.success) {
+                        // Jeśli nadpisywanie zakończone sukcesem, przekieruj do strony głównej
+                        window.location.href = "/";
+                    } else {
+                        alert("Wystąpił błąd: " + confirmationResponse.error);
+                    }
+                },
+                error: function (xhr) {
+                    alert("Wystąpił błąd podczas potwierdzania nadpisania danych.");
+                }
+            });
+            $('#confirmation-modal').hide();  // Ukrywamy modal
+        });
+
+        $('#confirm-no').on('click', function () {
+            // Wysyłamy do backendu informację, że użytkownik nie chce nadpisać danych
+            $.ajax({
+                url: '/confirm-overwrite',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    temp_id: tempId,
+                    overwrite_request: false
+                }),
+                success: function (confirmationResponse) {
+                    if (confirmationResponse.success) {
+                        // Jeśli brak nadpisania, przekieruj do strony głównej
+                        window.location.href = "/";
+                    } else {
+                        alert("Wystąpił błąd: " + confirmationResponse.error);
+                    }
+                },
+                error: function (xhr) {
+                    alert("Wystąpił błąd podczas potwierdzania nadpisania danych.");
+                }
+            });
+            $('#confirmation-modal').hide();  // Ukrywamy modal
+        });
+
+// Funkcja, która zamyka modal bez podejmowania akcji
+        $('#confirm-cancel').on('click', function () {
+            // Ukrywamy modal bez wysyłania żadnej informacji do backendu
+            $('#confirmation-modal').hide();
+        });
+
+
+        $('#plot-form').on('submit', function (e) {
+            e.preventDefault(); // Zapobiega domyślnemu wysyłaniu formularza
+            $('#error-message').empty();
+            $('#plot-area').empty(); // Czyści poprzednie wykresy
+            $('#download-buttons').hide(); // Ukrywa przyciski przed wygenerowaniem nowego wykresu
+
+            $.ajax({
+                url: '/plot',
+                type: 'POST',
+                data: $(this).serialize(),
+                success: function (data) {
+                    if (data.error) {
+                        $('#error-message').text(data.error);
+                    } else {
+                        const chartData = data.chart_data;
+
+                        // Przygotowanie danych do wykresu
+                        const traces = [];
+
+                        // Okres 1
+                        traces.push({
+                            x: chartData.x,
+                            y: chartData.y1,
+                            type: 'bar',
+                            name: `Okres 1 (${chartData.start_date_1} - ${chartData.end_date_1})`
+                        });
+
+                        // Okres 2 (jeśli dostępny)
+                        if (chartData.y2) {
+                            traces.push({
+                                x: chartData.x,
+                                y: chartData.y2,
+                                type: 'bar',
+                                name: `Okres 2 (${chartData.start_date_2} - ${chartData.end_date_2})`
+                            });
+                        }
+
+                        // Ustawienia osi i tytułów
+                        const layout = {
+                            title: chartData.labels.title,
+                            xaxis: {title: chartData.labels.xaxis},
+                            yaxis: {title: chartData.labels.yaxis},
+                            barmode: chartData.y2 ? 'group' : 'stack', // Grupowanie lub pojedynczy wykres
+                            height: 600,
+                            showlegend: true, // Legenda ma być zawsze widoczna
+                            legend: {
+                                orientation: 'h',  // Ustawienie orientacji legendy poziomej
+                                x: 0.5,            // Pozycja legendy w poziomie (środek wykresu)
+                                xanchor: 'center', // Wyśrodkowanie legendy
+                                y: -0.35,           // Ustawienie legendy poniżej wykresu
+                                yanchor: 'bottom', // Wyśrodkowanie legendy względem osi Y
+                            }
+                        };
+
+                        // Rysowanie wykresu za pomocą Plotly
+                        Plotly.newPlot('plot-area', traces, layout).then(() => {
+                        });
+
+                        // Obsługa przycisku Pobierz PNG
+                        $('#download-png').off('click').on('click', function () {
+                            Plotly.downloadImage('plot-area', {
+                                format: 'png',
+                                filename: 'wykres_samochody'
+                            });
+                        });
+
+                        // Obsługa przycisku Pobierz CSV
+                        $('#download-csv').off('click').on('click', function () {
+                            const csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent(data.csv_data);
+                            const link = document.createElement('a');
+                            link.setAttribute('href', csvContent);
+                            link.setAttribute('download', 'dane_samochody.csv');
+                            link.click();
+                        });
+                    }
+                },
+                error: function () {
+                    $('#error-message').text('Błąd podczas generowania wykresu.');
+                }
+            });
+        });
+
+
+        $('#clear-plots-button').on('click', function () {
+            $('#plot-area').empty().removeData('plots');
+        });
+
+        $('#download-button').on('click', function () {
+            $('#download-options').toggle(); // Pokaż/ukryj opcje
+        });
+    });
+</script>
+<script type="text/javascript">
+    var csrf_token = "{{ csrf_token() }}";
+
+    $.ajaxSetup({
+        beforeSend: function (xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", csrf_token);
+            }
+        }
+    });
+</script>
+</body>
+</html>
