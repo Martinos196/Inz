@@ -9,8 +9,9 @@ load-dotenv
 python-calamine
 openpyxl
 ```
-## .env file
+## Dodaj plik .env
 ```
 FERNET_KEY=
 FLASK_SECRET_KEY=
 ```
+## Psycopg2 może nie działać w nowszych wersjach Pythona na Windows (Python 3.9 działa)
